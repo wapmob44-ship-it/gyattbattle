@@ -7,6 +7,9 @@
 <!-- CRT Effect (delete these 2 lines to remove CRT effect) -->
 <link rel="stylesheet" href="crt-effect.css">
 <script src="crt-effect.js"></script>
+<!-- Boss Battle System -->
+<link rel="stylesheet" href="boss/boss-styles.css">
+<script src="boss/boss-system.js"></script>
 <style>
 /* --- your CSS unchanged --- */
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -708,6 +711,24 @@ const dialogueMessages = [
     "this gyatt is going parabolic",
     "diamond hands on this gyatt growth",
     "my streams are never going to be the same",
+    "i cant even fit through doorways anymore",
+    "my gyatt has its own gravitational pull",
+    "NASA wants to study my ass expansion",
+    "breaking: local man's gyatt causes market disruption",
+    "my gyatt just got verified on twitter",
+    "this is bigger than the internet bubble",
+    "my pants manufacturer just went public",
+    "i need to hire a structural engineer for my chair",
+    "my gyatt is trending on google",
+    "someone call the guinness book of world records",
+    "my ass is now classified as real estate",
+    "i just got a tax bill for my gyatt size",
+    "this gyatt growth is unsustainable",
+    "my insurance premiums just tripled",
+    "i need a permit for this level of gyatt",
+    "my gyatt is causing traffic delays",
+    "seismic activity detected in my area",
+    "my gyatt just broke the sound barrier",
     "the SEC cant regulate this level of gyatt",
     "bullish on gyatt technology",
     "to the moon and beyond my ass",
@@ -748,11 +769,18 @@ const dialogueMessages = [
     "my ass just broke the sound barrier",
     "the UN wants to put sanctions on my gyatt size",
     "my gyatt is causing tidal waves in the pacific",
-    "DYNAMIC_MARKETCAP_COMPLAINT"
+    "DYNAMIC_MARKETCAP_COMPLAINT",
+    
 ];
 let dialogueTimeout = null;
+let typeTextTimeout = null;
 
 function typeText(element, text, speed = 50) {
+    // Clear any existing typing animation
+    if (typeTextTimeout) {
+        clearTimeout(typeTextTimeout);
+    }
+    
     element.textContent = '';
     let i = 0;
     
@@ -760,7 +788,9 @@ function typeText(element, text, speed = 50) {
         if (i < text.length) {
             element.textContent += text.charAt(i);
             i++;
-            setTimeout(typeChar, speed);
+            typeTextTimeout = setTimeout(typeChar, speed);
+        } else {
+            typeTextTimeout = null;
         }
     }
     
@@ -768,6 +798,11 @@ function typeText(element, text, speed = 50) {
 }
 
 function showDialogue() {
+    // Don't show dialogue during boss battles
+    if (window.bossSystemPaused) {
+        return;
+    }
+    
     const dialogueBox = document.getElementById('dialogueBox');
     const dialogueText = document.getElementById('dialogueText');
     
@@ -801,6 +836,7 @@ function startRandomDialogue() {
 
 function createScrollingMessage() {
     const carouselContainer = document.getElementById('carouselContainer');
+    if (!carouselContainer) return;
     
     // Clear any existing messages
     carouselContainer.innerHTML = '';
@@ -1092,8 +1128,19 @@ function unlockAchievement(key, customDesc = null) {
 
 let achievementQueue = [];
 let isShowingAchievement = false;
+let bossSystem;
+
+// Global timer references for cleanup
+let marketCapInterval = null;
+let scrollingMessageInterval = null;
 
 function showAchievement(title, description) {
+    // Queue achievements during boss battles instead of ignoring them
+    if (window.bossSystemPaused) {
+        achievementQueue.push({ title, description });
+        return;
+    }
+    
     // Add to queue if already showing an achievement
     if (isShowingAchievement) {
         achievementQueue.push({ title, description });
@@ -1304,6 +1351,11 @@ async function fetchMarketCap() {
                 checkMilestones(mc);
                 checkAchievements(mc, mcChange);
                 
+                // Boss battle system
+                if (bossSystem) {
+                    bossSystem.updateBattle(mcChange);
+                }
+                
                 if (isJeetMode) {
                     isJeetMode = false;
                     createScrollingMessage(); 
@@ -1319,6 +1371,11 @@ async function fetchMarketCap() {
                 updateGrowthRate(mcChange);
                 playAppropriateSound(mcChange);
                 checkAchievements(mc, mcChange);
+                
+                // Boss battle system
+                if (bossSystem) {
+                    bossSystem.updateBattle(mcChange);
+                }
                 
                 if (!isJeetMode) {
                     isJeetMode = true;
@@ -1483,21 +1540,31 @@ function updateSoundButton() {
 }
 
 window.addEventListener('load', function() {
+    // Initialize global state
+    window.bossSystemPaused = false;
+    window.achievementQueue = achievementQueue;
+    window.isShowingAchievement = isShowingAchievement;
+    window.displayAchievement = displayAchievement;
+    
+    updateAchievementCounter();
     buildRuler(minMc);
+    
+    // Initialize boss system
+    if (typeof BossSystem !== 'undefined') {
+        bossSystem = new BossSystem();
+    }
+    
     fetchMarketCap();
-    setInterval(fetchMarketCap, 5000);
+    marketCapInterval = setInterval(fetchMarketCap, 5000);
     
     createScrollingMessage();
-    setInterval(createScrollingMessage, 10000); 
+    scrollingMessageInterval = setInterval(createScrollingMessage, 10000); 
     
     // Start random dialogue system
     startRandomDialogue();
     
     // Setup music system
     setupMusicEvents();
-    
-    // Initialize achievement counter
-    updateAchievementCounter();
     
     document.getElementById('soundToggle').addEventListener('click', toggleSound);
     document.getElementById('prevTrack').addEventListener('click', skipToPrevious);
@@ -1506,6 +1573,42 @@ window.addEventListener('load', function() {
     document.addEventListener('click', enableAudio, { once: true });
     document.addEventListener('keydown', enableAudio, { once: true });
 });
+
+// Cleanup function for proper state management
+function cleanup() {
+    // Clear all intervals
+    if (marketCapInterval) {
+        clearInterval(marketCapInterval);
+        marketCapInterval = null;
+    }
+    if (scrollingMessageInterval) {
+        clearInterval(scrollingMessageInterval);
+        scrollingMessageInterval = null;
+    }
+    
+    // Clear timeouts
+    if (dialogueTimeout) {
+        clearTimeout(dialogueTimeout);
+        dialogueTimeout = null;
+    }
+    if (typeTextTimeout) {
+        clearTimeout(typeTextTimeout);
+        typeTextTimeout = null;
+    }
+    
+    // Clean up boss system
+    if (bossSystem && typeof bossSystem.destroy === 'function') {
+        bossSystem.destroy();
+    }
+    
+    // Reset global state
+    window.bossSystemPaused = false;
+    isShowingAchievement = false;
+    achievementQueue.length = 0;
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', cleanup);
 </script>
 
 </body>
