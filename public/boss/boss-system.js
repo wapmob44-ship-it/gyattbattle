@@ -204,8 +204,8 @@ class BossSystem {
             this.mcAtBattleStart;
             
         document.getElementById('battleMcap').textContent = `* Current: $${parseInt(currentDisplayMc).toLocaleString()}`;
-        document.getElementById('winCondition').textContent = `*📈 PUMP to $${this.winThreshold.toLocaleString()} to win`;
-        document.getElementById('loseCondition').textContent = `*📉 Don't let it DUMP below $${this.loseThreshold.toLocaleString()}`;
+        document.getElementById('winCondition').textContent = `*📈 PUMP +$${actualThreshold.toLocaleString()} to win`;
+        document.getElementById('loseCondition').textContent = `*📉 Don't let it DUMP -$${actualThreshold.toLocaleString()}`;
         
         // Reset vertical candlestick battle display
         const progressBar = document.getElementById('battleProgress');
@@ -266,13 +266,18 @@ class BossSystem {
         this.totalMcChange += mcChange;
         const currentMc = this.mcAtBattleStart + this.totalMcChange;
         
-        // Calculate progress based on position between lose and win thresholds
-        // If currentMc is at loseThreshold = -100%, if at winThreshold = +100%, if at starting point = 0%
-        const totalRange = this.winThreshold - this.loseThreshold; // Total distance between lose and win
-        const progressFromLose = currentMc - this.loseThreshold; // How far from lose threshold
-        const progressPercent = Math.max(-100, Math.min(100, 
-            ((progressFromLose / totalRange) * 200) - 100 // Convert to -100 to +100 scale
-        ));
+        // Calculate progress based on how close we are to winning or losing
+        // Positive totalMcChange = progress toward victory
+        // Negative totalMcChange = progress toward defeat
+        let progressPercent = 0;
+        
+        if (this.totalMcChange >= 0) {
+            // Moving toward victory - calculate percentage of win threshold reached
+            progressPercent = Math.min(100, (this.totalMcChange / this.battleThreshold) * 100);
+        } else {
+            // Moving toward defeat - calculate percentage of lose threshold reached  
+            progressPercent = Math.max(-100, (this.totalMcChange / this.battleThreshold) * 100);
+        }
         this.battleProgress = progressPercent;
         
         // Update UI
@@ -289,18 +294,22 @@ class BossSystem {
         mcapElement.textContent = `* Current: $${parseInt(actualCurrentMc).toLocaleString()}`;
         
         // Vertical candlestick logic: positive moves up, negative moves down
+        // Max height is 50% (from center to top/bottom)
         if (this.totalMcChange >= 0) {
-            // Pumping: green bar extends upward from center
-            progressBar.style.height = Math.abs(progressPercent) + '%';
-            progressBar.style.top = (50 - Math.abs(progressPercent)) + '%';
+            // Pumping: green bar extends upward from center (max 50% height)
+            const barHeight = (progressPercent / 100) * 50; // Scale to max 50%
+            progressBar.style.height = barHeight + '%';
+            progressBar.style.top = (50 - barHeight) + '%';
             progressBar.style.background = '#00ff40';
             // Show pump message on Alon's side (left)
             this.showSideMessage('left', `📈 +$${this.totalMcChange.toLocaleString()} PUMP`, '#00ff40');
             this.hideSideMessage('right');
             currentElement.textContent = `* Price moving up!`;
         } else {
-            // Dumping: red bar extends downward from center
-            progressBar.style.height = Math.abs(progressPercent) + '%';
+            // Dumping: red bar extends downward from center (max 50% height)
+            const absProgressPercent = Math.abs(progressPercent);
+            const barHeight = (absProgressPercent / 100) * 50; // Scale to max 50%
+            progressBar.style.height = barHeight + '%';
             progressBar.style.top = '50%';
             progressBar.style.background = '#ff4444';
             // Show dump message on Boss's side (right)
