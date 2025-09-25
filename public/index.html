@@ -818,10 +818,20 @@ function showDialogue() {
     // Start typing animation
     typeText(dialogueText, randomMessage, 60);
     
-    // Hide dialogue after 7 seconds
-    setTimeout(() => {
+    // Calculate time needed for typing + 2 seconds buffer
+    const typingTime = randomMessage.length * 60; // 60ms per character
+    const hideDelay = Math.max(typingTime + 2000, 5000); // At least 5 seconds total
+    
+    // Clear any existing hide timeout
+    if (window.dialogueHideTimeout) {
+        clearTimeout(window.dialogueHideTimeout);
+    }
+    
+    // Hide dialogue after typing is complete + buffer
+    window.dialogueHideTimeout = setTimeout(() => {
         dialogueBox.style.display = 'none';
-    }, 7000);
+        window.dialogueHideTimeout = null;
+    }, hideDelay);
 }
 
 function startRandomDialogue() {
@@ -1594,6 +1604,10 @@ function cleanup() {
     if (typeTextTimeout) {
         clearTimeout(typeTextTimeout);
         typeTextTimeout = null;
+    }
+    if (window.dialogueHideTimeout) {
+        clearTimeout(window.dialogueHideTimeout);
+        window.dialogueHideTimeout = null;
     }
     
     // Clean up boss system

@@ -9,7 +9,7 @@ class BossSystem {
         this.bossWins = 0;
         this.bossLosses = 0;
         this.lastBattleTime = Date.now(); // Initialize to current time to prevent immediate battle
-        this.battleCooldown = 30000; // 30 seconds between battles
+        this.battleCooldown = 600000; // 10 seconds between battles (testing)
         this.battleTimer = null;
         this.countdownInterval = null;
         this.winThreshold = 0;
@@ -261,9 +261,12 @@ class BossSystem {
         this.totalMcChange += mcChange;
         const currentMc = this.mcAtBattleStart + this.totalMcChange;
         
-        // Update progress bar (-100 to 100) using the actual battle threshold
+        // Calculate progress based on position between lose and win thresholds
+        // If currentMc is at loseThreshold = -100%, if at winThreshold = +100%, if at starting point = 0%
+        const totalRange = this.winThreshold - this.loseThreshold; // Total distance between lose and win
+        const progressFromLose = currentMc - this.loseThreshold; // How far from lose threshold
         const progressPercent = Math.max(-100, Math.min(100, 
-            (this.totalMcChange / this.battleThreshold) * 100
+            ((progressFromLose / totalRange) * 200) - 100 // Convert to -100 to +100 scale
         ));
         this.battleProgress = progressPercent;
         
@@ -550,8 +553,15 @@ class BossSystem {
             countdownElement.textContent = 'Boss Incoming!';
             countdownElement.style.color = '#ffff00';
         } else {
-            const secondsLeft = Math.ceil(timeUntilNext / 1000);
-            countdownElement.textContent = `Next boss fight: ${secondsLeft}s`;
+            const totalSecondsLeft = Math.ceil(timeUntilNext / 1000);
+            const minutesLeft = Math.floor(totalSecondsLeft / 60);
+            const secondsLeft = totalSecondsLeft % 60;
+            
+            if (minutesLeft > 0) {
+                countdownElement.textContent = `Next boss fight: ${minutesLeft}m ${secondsLeft}s`;
+            } else {
+                countdownElement.textContent = `Next boss fight: ${secondsLeft}s`;
+            }
             countdownElement.style.color = '#ffff88';
         }
     }
@@ -636,7 +646,7 @@ class BossSystem {
                     <img src="top.png" alt="Alon" class="alon-congrat-portrait">
                 </div>
                 <div class="congrat-text">
-                    <div class="congrat-title">${message}</div>
+                    <div class="congrat-title ${won ? 'win' : 'lose'}">${message}</div>
                     <div class="congrat-quote">"${alonsReaction}"</div>
                 </div>
             </div>

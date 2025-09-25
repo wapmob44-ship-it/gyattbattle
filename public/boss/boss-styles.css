@@ -511,11 +511,19 @@
 }
 
 .congrat-title {
-    color: #00ff40;
     font-size: 24px;
     font-weight: bold;
     margin-bottom: 15px;
+}
+
+.congrat-title.win {
+    color: #00ff40;
     text-shadow: 0 0 10px #00ff40;
+}
+
+.congrat-title.lose {
+    color: #ff4444;
+    text-shadow: 0 0 10px #ff4444;
 }
 
 .congrat-quote {
