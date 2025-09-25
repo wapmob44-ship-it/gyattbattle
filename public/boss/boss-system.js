@@ -226,6 +226,11 @@ class BossSystem {
         // Pause all other UI elements
         this.pauseOtherUI();
         
+        // Speed up market cap fetching during battle
+        if (window.setMarketCapFetchInterval && window.battleFetchInterval) {
+            window.setMarketCapFetchInterval(window.battleFetchInterval);
+        }
+        
         // Start 2-minute timer
         this.startBattleTimer();
         
@@ -353,6 +358,12 @@ class BossSystem {
             document.getElementById('bossOverlay').classList.remove('active');
             // Resume all other UI elements
             this.resumeOtherUI();
+            
+            // Restore normal market cap fetch interval
+            if (window.setMarketCapFetchInterval && window.normalFetchInterval) {
+                window.setMarketCapFetchInterval(window.normalFetchInterval);
+            }
+            
             // Reset battle state completely
             this.currentBoss = null;
             this.battleProgress = 0;

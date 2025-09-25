@@ -1143,6 +1143,17 @@ let bossSystem;
 // Global timer references for cleanup
 let marketCapInterval = null;
 let scrollingMessageInterval = null;
+let normalFetchInterval = 5000; // Normal 5 second interval
+let battleFetchInterval = 2000; // Fast 2 second interval during battles
+
+// Function to change market cap fetch frequency
+function setMarketCapFetchInterval(intervalMs) {
+    if (marketCapInterval) {
+        clearInterval(marketCapInterval);
+    }
+    marketCapInterval = setInterval(fetchMarketCap, intervalMs);
+    console.log(`Market cap fetch interval set to ${intervalMs}ms`);
+}
 
 function showAchievement(title, description) {
     // Queue achievements during boss battles instead of ignoring them
@@ -1555,6 +1566,9 @@ window.addEventListener('load', function() {
     window.achievementQueue = achievementQueue;
     window.isShowingAchievement = isShowingAchievement;
     window.displayAchievement = displayAchievement;
+    window.setMarketCapFetchInterval = setMarketCapFetchInterval;
+    window.normalFetchInterval = normalFetchInterval;
+    window.battleFetchInterval = battleFetchInterval;
     
     updateAchievementCounter();
     buildRuler(minMc);
@@ -1565,7 +1579,7 @@ window.addEventListener('load', function() {
     }
     
     fetchMarketCap();
-    marketCapInterval = setInterval(fetchMarketCap, 5000);
+    setMarketCapFetchInterval(normalFetchInterval);
     
     createScrollingMessage();
     scrollingMessageInterval = setInterval(createScrollingMessage, 10000); 
