@@ -6,7 +6,7 @@
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.9);
-    z-index: 10000;
+    z-index: 100000;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -355,7 +355,7 @@
 
 .countdown-text {
     font-family: 'Courier New', monospace;
-    color: #ffffff;
+    color: red !important;
     font-size: 10x;
     margin-top: 3px;
     font-weight: bold;
@@ -367,10 +367,10 @@
     bottom: 55px;
     left: 50%;
     transform: translateX(-50%);
-    color: #ffffff;
+    color: rgb(255, 255, 255) !important;
     font-weight: bold;
     font-size: 24px;
-    z-index: 1000;
+    z-index: 10002;
 }
 
 /* Boss Trophies Display */
@@ -379,7 +379,6 @@
     top: 320px;
     right: 20px;
     width: 300px;
-    max-height: 400px;
     background: #000;
     border: 2px solid #fff;
     padding: 15px;
@@ -433,9 +432,24 @@
     background: rgba(255, 215, 0, 0.1);
 }
 
+.trophy-item.current {
+    border-color: #00ff40;
+    background: rgba(0, 255, 64, 0.1);
+    animation: pulse-current 2s ease-in-out infinite;
+}
+
 .trophy-item.locked {
     opacity: 0.4;
     filter: grayscale(100%);
+}
+
+@keyframes pulse-current {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(0, 255, 64, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(0, 255, 64, 0.6);
+    }
 }
 
 .trophy-portrait {
@@ -467,16 +481,21 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.8);
-    background: linear-gradient(145deg, #1a1a1a, #2d2d2d);
+    background: #000; /* Same as boss window */
     border: 3px solid #fff;
     border-radius: 0;
     padding: 30px;
-    max-width: 500px;
+    max-width: 600px;
     width: 90%;
-    z-index: 15000;
+    z-index: 100001; /* Higher than boss overlay */
     opacity: 0;
     transition: all 0.3s ease;
     font-family: 'Courier New', monospace;
+}
+
+/* Hide boss window when popup shows */
+.boss-overlay.popup-active .boss-window {
+    display: none;
 }
 
 .congratulation-popup.show {
@@ -486,24 +505,80 @@
 
 .congrat-content {
     display: flex;
+    flex-direction: column;
     align-items: center;
     gap: 20px;
 }
 
-.congrat-portrait {
-    font-size: 60px;
-    animation: bounce 1s ease-in-out infinite alternate;
+.congrat-fighters {
     display: flex;
     justify-content: center;
     align-items: center;
+    width: 100%;
+    gap: 20px;
 }
 
-.alon-congrat-portrait {
+.congrat-fighter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.congrat-portrait {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.alon-congrat-portrait, .boss-congrat-portrait {
     width: 80px;
     height: 80px;
     object-fit: cover;
     border-radius: 0;
     border: 2px solid #fff;
+}
+
+.defeat-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 80px;
+    font-weight: bold;
+    z-index: 10;
+    color: #ff4444;
+    text-shadow: 0 0 15px #ff4444, 0 0 30px #ff4444;
+    animation: defeatPulse 1.5s ease-in-out infinite alternate;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes defeatPulse {
+    0% { 
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.8;
+    }
+    100% { 
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 1;
+    }
+}
+
+.fighter-name {
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.congrat-text {
+    text-align: center;
 }
 
 .congrat-text {
