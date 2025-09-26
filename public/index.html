@@ -38,7 +38,7 @@ body {
     border: 3px solid #fff;
     border-radius: 0;
     font-size: 36px;
-    z-index: 1000;
+    z-index: 5000; /* Higher z-index to stay above confetti */
     font-family: 'Courier New', monospace;
 }
 .marketcap-amount {
@@ -61,7 +61,7 @@ body {
     font-family: 'Courier New', monospace;
     font-size: 18px;
     text-align: center;
-    z-index: 1000;
+    z-index: 5000; /* Higher z-index to stay above confetti */
 }
 .sound-toggle {
     position: absolute;
@@ -235,7 +235,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    z-index: 2;
+    z-index: 5000; /* Higher z-index to stay above confetti */
     transition: transform 0.2s cubic-bezier(0.68,-0.55,0.265,1.55);
 }
 .top-image {
@@ -252,6 +252,31 @@ body {
     z-index: 10001;
     transform-origin: center bottom;
     transition: transform 0.2s cubic-bezier(0.68,-0.55,0.265,1.55);
+}
+
+/* Idle animation for when not scaling */
+.image-stack.idle {
+    animation: containerIdle 3s ease-in-out infinite;
+}
+
+@keyframes containerIdle {
+    0%, 100% { 
+        transform: translateX(-50%) translateY(0px);
+    }
+    50% { 
+        transform: translateX(-50%) translateY(6px);
+    }
+}
+
+/* Scale change hue effects */
+.bottom-image.scale-increase {
+    filter: hue-rotate(60deg) saturate(2) brightness(1.1);
+    transition: filter 0.3s ease;
+}
+
+.bottom-image.scale-decrease {
+    filter: hue-rotate(-30deg) saturate(1.5) brightness(0.9);
+    transition: filter 0.3s ease;
 }
 .ruler-container { 
     position: absolute; 
@@ -305,13 +330,13 @@ body {
     width: 200px;
     height: 120px;
     pointer-events: none;
-    z-index: 5000;
+    z-index: 100; /* Lower z-index to stay behind UI elements */
     animation: confetti-fall 2s ease-out forwards;
 }
 .confetti-text {
     position: fixed;
     pointer-events: none;
-    z-index: 5000;
+    z-index: 100; /* Lower z-index to stay behind UI elements */
     animation: confetti-fall 2s ease-out forwards;
     color: white;
     font-size: 24px;
@@ -353,7 +378,7 @@ body {
     width: 60px;
     height: 150px;
     pointer-events: none;
-    z-index: 5000;
+    z-index: 200; /* Lower z-index to stay behind UI elements */
     animation: shoot-up 3s ease-out forwards;
     filter: brightness(1.5) saturate(2) drop-shadow(0 0 15px #00ff40);
 }
@@ -397,7 +422,7 @@ body {
     border: 2px solid #fff;
     padding: 15px;
     font-family: 'Courier New', monospace;
-    z-index: 1000;
+    z-index: 5000; /* Higher z-index to stay above confetti */
 }
 
 .meter-label {
@@ -530,6 +555,11 @@ body {
 <audio id="bgMusic11" src="bgmusic11.mp3" preload="auto"></audio>
 <audio id="bgMusic12" src="bgmusic12.mp3" preload="auto"></audio>
 <audio id="bgMusic13" src="bgmusic13.mp3" preload="auto"></audio>
+<audio id="bgMusic14" src="bgmusic14.mp3" preload="auto"></audio>
+<audio id="bgMusic15" src="bgmusic15.mp3" preload="auto"></audio>
+<audio id="bossBattleMusic" src="boss/bossbattle.mp3" preload="auto" loop></audio>
+<audio id="victorySound" src="boss/victory.mp3" preload="auto"></audio>
+<audio id="lossSound" src="boss/loss.mp3" preload="auto"></audio>
 
 <div class="instruction-text">every $AGI buy makes Alons GYATT grow, every sell shrinks it</div>
 
@@ -602,6 +632,9 @@ body {
 <script>
 let scaleFactor = 1;
 let backgroundPosition = 100;
+let idleAnimationActive = false;
+let scaleAnimationTimeout = null;
+let hueEffectTimeout = null;
 
 const bottomImage = document.getElementById('bottomImage');
 const topImage = document.getElementById('topImage');
@@ -627,8 +660,13 @@ const bgMusicTracks = [
     document.getElementById('bgMusic10'),
     document.getElementById('bgMusic11'),
     document.getElementById('bgMusic12'),
-    document.getElementById('bgMusic13')
+    document.getElementById('bgMusic13'),
+    document.getElementById('bgMusic14'),
+    document.getElementById('bgMusic15')
 ];
+const bossBattleMusic = document.getElementById('bossBattleMusic');
+const victorySound = document.getElementById('victorySound');
+const lossSound = document.getElementById('lossSound');
 let currentTrackIndex = 0;
 let currentBgMusic = bgMusicTracks[0];
 
@@ -1260,12 +1298,48 @@ function updateRuler(marketCap) {
     }, 30);
 }
 
+function startIdleAnimation() {
+    if (idleAnimationActive) return;
+    idleAnimationActive = true;
+    imageStack.classList.add('idle');
+}
+
+function stopIdleAnimation() {
+    if (!idleAnimationActive) return;
+    idleAnimationActive = false;
+    imageStack.classList.remove('idle');
+}
+
 function updateScale(newScale) {
     newScale = parseFloat(newScale);
     if (newScale === scaleFactor) return;
+    
+    // Stop idle animation when actively scaling
+    stopIdleAnimation();
+    
+    // Clear any existing timeouts
+    if (scaleAnimationTimeout) {
+        clearTimeout(scaleAnimationTimeout);
+    }
+    if (hueEffectTimeout) {
+        clearTimeout(hueEffectTimeout);
+    }
 
     const currentScale = scaleFactor;
     scaleFactor = newScale;
+    
+    // Apply hue effect based on scale change
+    bottomImage.classList.remove('scale-increase', 'scale-decrease');
+    if (newScale > currentScale) {
+        bottomImage.classList.add('scale-increase');
+    } else if (newScale < currentScale) {
+        bottomImage.classList.add('scale-decrease');
+    }
+    
+    // Remove hue effect after 1 second
+    hueEffectTimeout = setTimeout(() => {
+        bottomImage.classList.remove('scale-increase', 'scale-decrease');
+    }, 1000);
 
     bottomImage.classList.remove("bounce-animation");
     void bottomImage.offsetWidth;
@@ -1310,8 +1384,21 @@ function updateScale(newScale) {
     const baseMultiplier = scaleFactor >= 2.0 ? 0.63 : 0.68;
     const spacingAdjustment = Math.max(0, heightIncrease * baseMultiplier);
 
-    topImage.style.transform = `translate(44px, ${45 - spacingAdjustment}px)`;
+    const topX = 44;
+    const topY = 45 - spacingAdjustment;
+    
+    topImage.style.transform = `translate(${topX}px, ${topY}px)`;
     bottomImage.style.transform = `scale(${effectiveScale})`;
+    
+    // Set CSS custom properties for idle animation
+    bottomImage.style.setProperty('--current-gyatt-scale', effectiveScale);
+    topImage.style.setProperty('--current-top-x', topX + 'px');
+    topImage.style.setProperty('--current-top-y', topY + 'px');
+    
+    // Start idle animation after 2 seconds of no scaling
+    scaleAnimationTimeout = setTimeout(() => {
+        startIdleAnimation();
+    }, 2000);
 }
 
 
@@ -1360,8 +1447,28 @@ async function fetchMarketCap() {
             
             if (mc > lastMc) {
                 audioUp.currentTime = 0;
-                // Add random pitch variation (0.8x to 1.3x speed)
-                audioUp.playbackRate = 0.8 + Math.random() * 0.5;
+                // Calculate duration based on market cap change - bigger changes = longer duration
+                const changeAmount = Math.abs(mcChange);
+                let playbackRate;
+                
+                // More dramatic scaling for smaller ranges
+                if (changeAmount <= 100) {
+                    playbackRate = 0.9; // Fast for small changes
+                } else if (changeAmount <= 200) {
+                    playbackRate = 0.7; // Noticeably slower
+                } else if (changeAmount <= 500) {
+                    playbackRate = 0.5; // Much slower
+                } else if (changeAmount <= 1000) {
+                    playbackRate = 0.35; // Very slow
+                } else {
+                    // For changes over $1000, scale down further
+                    const extraChange = Math.min((changeAmount - 1000) / 2000, 1); // Max at $3000
+                    playbackRate = 0.3 - (extraChange * 0.15); // Down to 0.2 for huge pumps
+                }
+                
+                // Add slight random variation
+                audioUp.playbackRate = playbackRate + (Math.random() * 0.05 - 0.025);
+                audioUp.volume = 0.7; // Make it quieter (30% volume)
                 audioUp.play().catch(e => console.log('Audio play failed:', e));
                 createConfetti(mcChange);
                 createArrowShoot();
@@ -1383,8 +1490,20 @@ async function fetchMarketCap() {
                 }
             } else if (mc < lastMc) {
                 audioDown.currentTime = 0;
-                // Add random pitch variation (0.8x to 1.3x speed)
-                audioDown.playbackRate = 0.8 + Math.random() * 0.5;
+                // Calculate volume based on market cap change - bigger decreases = higher volume
+                const changeAmount = Math.abs(mcChange);
+                let volume;
+                
+                // Check if boss battle is active for louder volume
+                if (window.bossSystem && window.bossSystem.battleActive) {
+                    volume = 0.15; // Much louder during boss battles
+                } else {
+                    volume = 0.01; // Very quiet during normal gameplay
+                }
+                
+                // Set volume and playback rate
+                audioDown.volume = volume;
+                audioDown.playbackRate = 0.8 + Math.random() * 0.5; // Keep pitch variation
                 audioDown.play().catch(e => console.log('Audio play failed:', e));
                 createNegativeConfetti(mcChange);
                 
@@ -1426,6 +1545,7 @@ function playNextTrack() {
     
     currentTrackIndex = (currentTrackIndex + 1) % bgMusicTracks.length;
     currentBgMusic = bgMusicTracks[currentTrackIndex];
+    window.currentBgMusic = currentBgMusic; // Keep window reference updated
     
     if (audioEnabled) {
         currentBgMusic.volume = 0.01;
@@ -1454,9 +1574,10 @@ function skipToPrevious() {
     
     currentTrackIndex = (currentTrackIndex - 1 + bgMusicTracks.length) % bgMusicTracks.length;
     currentBgMusic = bgMusicTracks[currentTrackIndex];
+    window.currentBgMusic = currentBgMusic; // Keep window reference updated
     
     if (audioEnabled) {
-        currentBgMusic.volume = 0.01;
+        currentBgMusic.volume = 0.03;
         currentBgMusic.play().catch(e => console.log('Background music failed:', e));
         updateNowPlaying();
     }
@@ -1512,6 +1633,7 @@ function setupMusicEvents() {
 
 function enableAudio() {
     audioEnabled = true;
+    window.audioEnabled = audioEnabled; // Keep window.audioEnabled in sync
     updateSoundButton();
     updateNowPlaying();
     
@@ -1531,6 +1653,7 @@ function enableAudio() {
 
 function toggleSound() {
     audioEnabled = !audioEnabled;
+    window.audioEnabled = audioEnabled; // Keep window.audioEnabled in sync
     updateSoundButton();
     updateNowPlaying();
     
@@ -1569,6 +1692,11 @@ window.addEventListener('load', function() {
     window.setMarketCapFetchInterval = setMarketCapFetchInterval;
     window.normalFetchInterval = normalFetchInterval;
     window.battleFetchInterval = battleFetchInterval;
+    window.bossBattleMusic = bossBattleMusic;
+    window.victorySound = victorySound;
+    window.lossSound = lossSound;
+    window.currentBgMusic = currentBgMusic;
+    window.audioEnabled = audioEnabled;
     
     updateAchievementCounter();
     buildRuler(minMc);
@@ -1589,6 +1717,16 @@ window.addEventListener('load', function() {
     
     // Setup music system
     setupMusicEvents();
+    
+    // Set initial CSS custom properties for idle animation
+    bottomImage.style.setProperty('--current-gyatt-scale', 1);
+    topImage.style.setProperty('--current-top-x', '44px');
+    topImage.style.setProperty('--current-top-y', '23px');
+    
+    // Start idle animation initially
+    setTimeout(() => {
+        startIdleAnimation();
+    }, 1000);
     
     document.getElementById('soundToggle').addEventListener('click', toggleSound);
     document.getElementById('prevTrack').addEventListener('click', skipToPrevious);
@@ -1618,6 +1756,10 @@ function cleanup() {
     if (typeTextTimeout) {
         clearTimeout(typeTextTimeout);
         typeTextTimeout = null;
+    }
+    if (hueEffectTimeout) {
+        clearTimeout(hueEffectTimeout);
+        hueEffectTimeout = null;
     }
     if (window.dialogueHideTimeout) {
         clearTimeout(window.dialogueHideTimeout);

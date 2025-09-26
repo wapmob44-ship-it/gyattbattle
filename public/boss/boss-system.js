@@ -9,13 +9,14 @@ class BossSystem {
         this.bossWins = 0;
         this.bossLosses = 0;
         this.lastBattleTime = Date.now(); // Initialize to current time to prevent immediate battle
-        this.battleCooldown = 600000; // 10 seconds between battles (testing)
+        this.battleCooldown = 900000; // 10 seconds between battles (testing)
         this.battleTimer = null;
         this.countdownInterval = null;
         this.winThreshold = 0;
         this.loseThreshold = 0;
         this.battleThreshold = 0;
         this.defeatedBosses = new Set(); // Track which bosses have been defeated
+        this.currentBossIndex = 0; // Track current boss progression
         
         // Initialize global pause state
         window.bossSystemPaused = false;
@@ -65,7 +66,7 @@ class BossSystem {
                 name: "SBF",
                 image: "boss/sbf.jpg",
                 difficultyPercent: 6, // 6% of current market cap
-                description: "gm"
+                description: "I will treat $AGI like FTX"
             },
             {
                 name: "Trump",
@@ -77,13 +78,19 @@ class BossSystem {
                 name: "Vitalik",
                 image: "boss/vitalik.jpg",
                 difficultyPercent: 8, // 8% of current market cap
-                description: "Weaponized autist"
+                description: "i want to donate the markecap to charity"
             },
             {
                 name: "Ansem",
                 image: "boss/ansem.jpg",
                 difficultyPercent: 10, // 10% of current market cap
                 description: "Doomer final boss"
+            },
+            {
+                name: "Dior",
+                image: "boss/dior.jpg",
+                difficultyPercent: 15, // 15% of current market cap - hardest boss
+                description: "The creator of the alon gyatt meme"
             }
         ];
     }
@@ -149,8 +156,18 @@ class BossSystem {
         if (!this.shouldTriggerBattle()) return;
         
         const bosses = this.getBosses();
-        const randomBoss = bosses[Math.floor(Math.random() * bosses.length)];
-        this.startBattle(randomBoss);
+        let currentBoss;
+        
+        // Check if we've beaten all bosses (completed the progression)
+        if (this.currentBossIndex >= bosses.length) {
+            // After beating all bosses, switch to random selection
+            currentBoss = bosses[Math.floor(Math.random() * bosses.length)];
+        } else {
+            // During progression, use sequential order
+            currentBoss = bosses[this.currentBossIndex];
+        }
+        
+        this.startBattle(currentBoss);
     }
 
     startBattle(boss) {
@@ -222,6 +239,9 @@ class BossSystem {
         
         // Show overlay
         document.getElementById('bossOverlay').classList.add('active');
+        
+        // Start boss battle music
+        this.startBattleMusic();
         
         // Pause all other UI elements
         this.pauseOtherUI();
@@ -343,8 +363,11 @@ class BossSystem {
             this.bossWins++;
             // Add boss to defeated list (trophy earned!)
             this.defeatedBosses.add(this.currentBoss.name);
+            // Advance to next boss only when current one is defeated
+            this.currentBossIndex++;
         } else {
             this.bossLosses++;
+            // Stay on the same boss if defeated - no progression
         }
         
         // Use the stored battle threshold for display
@@ -352,17 +375,21 @@ class BossSystem {
         
         // Show result with Undertale theme
         const resultMessage = won ? 
-            `* You won! You earned ${finalThreshold} EXP and 0 gold.` :
+            `* You won! You earned ${finalThreshold} Marketcap.` :
             `* You lost. ${this.currentBoss.name} is getting stronger.`;
         
         document.getElementById('bossTitle').textContent = resultMessage;
+        
+        // Stop battle music and play victory/loss sound
+        this.stopBattleMusic();
+        this.playResultSound(won);
         
         // Show congratulatory popup after 1 second
         setTimeout(() => {
             this.showCongratulationPopup(won);
         }, 1000);
         
-        // Hide overlay after 5 seconds (longer to show popup)
+        // Hide overlay after 8 seconds (longer to show popup and hear sounds)
         setTimeout(() => {
             document.getElementById('bossOverlay').classList.remove('active');
             // Resume all other UI elements
@@ -380,7 +407,7 @@ class BossSystem {
             this.winThreshold = 0;
             this.loseThreshold = 0;
             this.battleThreshold = 0;
-        }, 5000);
+        }, 8000);
         
         // Save stats
         this.saveStats();
@@ -418,6 +445,80 @@ class BossSystem {
         const messageElement = document.getElementById(`${side}SideMessage`);
         if (messageElement) {
             messageElement.style.display = 'none';
+        }
+    }
+
+    startBattleMusic() {
+        console.log('Starting battle music...', {
+            audioEnabled: window.audioEnabled,
+            bossBattleMusic: !!window.bossBattleMusic,
+            currentBgMusic: !!window.currentBgMusic
+        });
+        
+        if (!window.audioEnabled || !window.bossBattleMusic) {
+            console.log('Battle music not started - audio disabled or music not found');
+            return;
+        }
+        
+        // Pause normal background music
+        if (window.currentBgMusic) {
+            window.currentBgMusic.pause();
+            console.log('Paused normal bg music');
+        }
+        
+        // Start boss battle music
+        window.bossBattleMusic.volume = 0.05; // Make it louder so we can hear it
+        window.bossBattleMusic.currentTime = 0;
+        window.bossBattleMusic.play().then(() => {
+            console.log('Boss battle music started successfully');
+        }).catch(e => {
+            console.log('Boss battle music failed:', e);
+        });
+    }
+
+    stopBattleMusic() {
+        if (!window.bossBattleMusic) return;
+        
+        // Stop boss battle music
+        window.bossBattleMusic.pause();
+        window.bossBattleMusic.currentTime = 0;
+        
+        // Resume normal background music after a delay (3 seconds)
+        setTimeout(() => {
+            if (window.audioEnabled && window.currentBgMusic) {
+                window.currentBgMusic.volume = 0.03;
+                window.currentBgMusic.play().catch(e => console.log('Background music resume failed:', e));
+                console.log('Normal background music resumed after delay');
+            }
+        }, 3000);
+    }
+
+    playResultSound(won) {
+        console.log('Playing result sound...', {
+            won: won,
+            audioEnabled: window.audioEnabled,
+            victorySound: !!window.victorySound,
+            lossSound: !!window.lossSound
+        });
+        
+        if (!window.audioEnabled) {
+            console.log('Result sound not played - audio disabled');
+            return;
+        }
+        
+        const sound = won ? window.victorySound : window.lossSound;
+        const soundName = won ? 'victory' : 'loss';
+        
+        if (sound) {
+            sound.volume = 0.5; // Make it louder
+            sound.currentTime = 0;
+            sound.play().then(() => {
+                console.log(`${soundName} sound played successfully`);
+            }).catch(e => {
+                console.log(`${soundName} sound failed:`, e);
+            });
+        } else {
+            console.log(`${soundName} sound not found`);
         }
     }
 
@@ -468,26 +569,41 @@ class BossSystem {
         const allBosses = this.getBosses();
         const trophyCount = this.defeatedBosses.size;
         const totalBosses = allBosses.length;
+        const isProgressionComplete = this.currentBossIndex >= totalBosses;
         
         let trophyHTML = `
             <div class="trophy-header">
                 <div class="trophy-icon">🏆</div>
                 <div class="trophy-text">
                     <div>Boss Trophies</div>
-                    <div>${trophyCount}/${totalBosses} Defeated</div>
+                    <div>${trophyCount}/${totalBosses} Defeated ${isProgressionComplete ? '✨ COMPLETE!' : ''}</div>
                 </div>
             </div>
             <div class="trophy-grid">
         `;
         
         // Add trophy for each boss
-        allBosses.forEach(boss => {
+        allBosses.forEach((boss, index) => {
             const isDefeated = this.defeatedBosses.has(boss.name);
+            const isCurrent = index === this.currentBossIndex && !isProgressionComplete;
+            const isUpcoming = index > this.currentBossIndex && !isProgressionComplete;
+            
+            let statusClass = 'locked';
+            let statusIcon = '🔒';
+            
+            if (isDefeated) {
+                statusClass = 'defeated';
+                statusIcon = '✅';
+            } else if (isCurrent) {
+                statusClass = 'current';
+                statusIcon = '⚔️';
+            }
+            
             trophyHTML += `
-                <div class="trophy-item ${isDefeated ? 'defeated' : 'locked'}">
+                <div class="trophy-item ${statusClass}">
                     <img src="${boss.image}" alt="${boss.name}" class="trophy-portrait">
                     <div class="trophy-name">${boss.name}</div>
-                    ${isDefeated ? '<div class="trophy-status">✅</div>' : '<div class="trophy-status">🔒</div>'}
+                    <div class="trophy-status">${statusIcon}</div>
                 </div>
             `;
         });
@@ -501,6 +617,7 @@ class BossSystem {
             bossWins: this.bossWins,
             bossLosses: this.bossLosses,
             defeatedBosses: Array.from(this.defeatedBosses), // Convert Set to Array for JSON
+            currentBossIndex: this.currentBossIndex, // Save progression
             achievements: window.achievements || {},
             achievementCount: window.achievementCount || 0,
             timestamp: Date.now()
@@ -524,6 +641,7 @@ class BossSystem {
                 
                 this.bossWins = stats.bossWins || 0;
                 this.bossLosses = stats.bossLosses || 0;
+                this.currentBossIndex = stats.currentBossIndex || 0; // Load progression
                 
                 // Load defeated bosses (convert Array back to Set)
                 if (stats.defeatedBosses) {
@@ -561,6 +679,19 @@ class BossSystem {
         const now = Date.now();
         const timeSinceLastBattle = now - this.lastBattleTime;
         const timeUntilNext = this.battleCooldown - timeSinceLastBattle;
+        
+        // Get current boss info for display
+        const bosses = this.getBosses();
+        let bossName;
+        
+        if (this.currentBossIndex >= bosses.length) {
+            // After completing all bosses, show random
+            bossName = 'Random Boss';
+        } else {
+            // During progression, show specific boss
+            const currentBoss = bosses[this.currentBossIndex];
+            bossName = currentBoss ? currentBoss.name : 'Unknown';
+        }
 
         if (this.battleActive) {
             countdownElement.textContent = 'Battle Active!';
@@ -570,7 +701,7 @@ class BossSystem {
         } else if (timeUntilNext <= 0) {
             // Auto-trigger battle when timer reaches zero (only if no battle is active)
             this.startTimerBattle();
-            countdownElement.textContent = 'Boss Incoming!';
+            countdownElement.textContent = `${bossName} Incoming!`;
             countdownElement.style.color = '#ffff00';
         } else {
             const totalSecondsLeft = Math.ceil(timeUntilNext / 1000);
@@ -578,9 +709,9 @@ class BossSystem {
             const secondsLeft = totalSecondsLeft % 60;
             
             if (minutesLeft > 0) {
-                countdownElement.textContent = `Next boss fight: ${minutesLeft}m ${secondsLeft}s`;
+                countdownElement.textContent = `Next: ${bossName} in ${minutesLeft}m ${secondsLeft}s`;
             } else {
-                countdownElement.textContent = `Next boss fight: ${secondsLeft}s`;
+                countdownElement.textContent = `Next: ${bossName} in ${secondsLeft}s`;
             }
             countdownElement.style.color = '#ffff88';
         }
@@ -626,6 +757,8 @@ class BossSystem {
     }
 
     showCongratulationPopup(won) {
+        console.log('Showing congratulation popup for:', won ? 'victory' : 'defeat');
+        
         // Create congratulation popup
         const popup = document.createElement('div');
         popup.className = 'congratulation-popup';
@@ -662,8 +795,21 @@ class BossSystem {
         
         popup.innerHTML = `
             <div class="congrat-content">
-                <div class="congrat-portrait">
-                    <img src="top.png" alt="Alon" class="alon-congrat-portrait">
+                <div class="congrat-fighters">
+                    <div class="congrat-fighter">
+                        <div class="congrat-portrait">
+                            <img src="top.png" alt="Alon" class="alon-congrat-portrait">
+                            ${!won ? '<div class="defeat-indicator">✗</div>' : ''}
+                        </div>
+                        <div class="fighter-name">Alon</div>
+                    </div>
+                    <div class="congrat-fighter">
+                        <div class="congrat-portrait">
+                            <img src="${this.currentBoss.image}" alt="${this.currentBoss.name}" class="boss-congrat-portrait">
+                            ${won ? '<div class="defeat-indicator">✗</div>' : ''}
+                        </div>
+                        <div class="fighter-name">${this.currentBoss.name}</div>
+                    </div>
                 </div>
                 <div class="congrat-text">
                     <div class="congrat-title ${won ? 'win' : 'lose'}">${message}</div>
@@ -674,18 +820,28 @@ class BossSystem {
         
         document.body.appendChild(popup);
         
+        // Add popup-active class to boss overlay for opacity effect
+        const bossOverlay = document.getElementById('bossOverlay');
+        if (bossOverlay) {
+            bossOverlay.classList.add('popup-active');
+        }
+        
         // Show popup with animation
         setTimeout(() => {
             popup.classList.add('show');
         }, 100);
         
-        // Remove popup after 3 seconds
+        // Remove popup after 5 seconds (2 seconds longer)
         setTimeout(() => {
             popup.classList.remove('show');
+            // Remove popup-active class
+            if (bossOverlay) {
+                bossOverlay.classList.remove('popup-active');
+            }
             setTimeout(() => {
                 popup.remove();
             }, 300);
-        }, 3000);
+        }, 5000);
     }
 
     processQueuedAchievements() {
@@ -700,6 +856,9 @@ class BossSystem {
 
     // Cleanup method for proper state management
     destroy() {
+        // Stop battle music if playing
+        this.stopBattleMusic();
+        
         // Clear all intervals
         if (this.battleTimer) {
             clearInterval(this.battleTimer);
